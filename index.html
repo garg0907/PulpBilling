@@ -1388,8 +1388,9 @@ document.getElementById("submitBtn").addEventListener("click", function () {
                 const wantsLoadingUpdate = weight > 0;
                 const wantsDrayageUpdate =
                     (containers > 0 && containers !== (oldRow.Containers || 0)) ||
-                    (fuel > 0 && fuel !== (oldRow.Fuel || 0));
+                    (fuel > 0 && fuel !== (oldRow.Fuel || 0) || oldRow.DrayageTotal != currentDrayage);
                 const wantsStorageUpdate = storage > 0;
+				//const oldDrayage = oldRow.DrayageTotal;
 
                 // ⭐ Loading update
                 if (wantsLoadingUpdate) {
