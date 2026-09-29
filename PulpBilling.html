@@ -1,0 +1,1494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<meta charset="UTF-8">
+<title>Customer Billing</title>
+
+<style>
+.top-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #173b67;
+    color: white;
+    padding: 14px 24px;
+    margin: -20px -20px 25px -20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.app-title {
+    font-size: 21px;
+    font-weight: bold;
+}
+
+.menu-options {
+    display: flex;
+    gap: 8px;
+}
+
+.menu-btn {
+    background: transparent;
+    color: white;
+    border: 1px solid rgba(255,255,255,0.5);
+    padding: 9px 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.menu-btn:hover,
+.menu-btn.active {
+    background: white;
+    color: #173b67;
+}
+
+.page {
+    display: none;
+}
+
+.active-page {
+    display: block;
+}
+
+.rate-action-btn {
+    padding: 7px 12px;
+    margin: 2px;
+    font-size: 12px;
+}
+
+.rate-edit-btn {
+    background: #ffc107;
+    color: #222;
+}
+
+.rate-delete-btn {
+    background: #dc3545;
+    color: white;
+}
+
+@media (max-width: 600px) {
+    .top-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .menu-options {
+        width: 100%;
+    }
+
+    .menu-btn {
+        flex: 1;
+    }
+}
+
+.chart-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.chart-box {
+    width: 30%;
+    min-height: 350px;   /* ⭐ ensures chart has space */
+}
+
+.chart-box canvas {
+    height: 300px !important;   /* ⭐ bigger canvas = bigger bars */
+}
+#exportButtonWrapper {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;   /* ⭐ pushes button to the right */
+    margin-bottom: 10px;
+}
+#customerRecordsScroll {
+    max-height: 700px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid #ccc;
+    padding: 10px;                 /* ⭐ adds space inside the scroll box */
+    box-sizing: border-box;
+}
+.resultTable {
+    width: 98%;                    /* ⭐ makes table slightly smaller */
+    margin: 0 auto 20px auto;      /* ⭐ centers table + adds bottom spacing */
+    border-collapse: collapse;
+}
+
+
+#exportExcelBtn {
+    padding: 8px 14px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+#yearFilterSection {
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+#yearFilter {
+    width: 160px;
+    padding: 6px;
+    font-size: 14px;
+}
+
+#monthFilter {
+    width: 180px;
+    padding: 8px;
+    font-size: 14px;
+}
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: #f5f7fa;
+        color: #333;
+    }
+
+    h2 {
+        text-align: Left;
+        margin-bottom: 20px;
+        font-size: 24px;
+        color: #222;
+    }
+
+    /* Heading above filter section */
+    h3 {
+        margin-top: 30px;
+        margin-bottom: 12px;
+        font-size: 20px;
+        color: #333;
+        font-weight: bold;
+        text-align: left;
+    }
+
+    /* Card container */
+    .card {
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        margin-bottom: 25px;
+    }
+
+    /* Responsive form grid */
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 18px;
+        align-items: center;
+    }
+
+    label {
+        font-weight: bold;
+        margin-bottom: 5px;
+        display: block;
+    }
+
+    /* ⭐ Smaller input boxes */
+    select, input {
+        width: 200px;          /* reduced width */
+        padding: 8px;          /* reduced padding */
+        font-size: 13px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+    }
+
+    /* Mobile: full width */
+    @media (max-width: 600px) {
+        select, input {
+            width: 100%;
+        }
+    }
+
+    button {
+        padding: 10px 26px;
+        font-size: 14px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        background: #007bff;
+        color: white;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        background: #005fcc;
+    }
+
+    /* Filter section */
+    .filter-section {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 20px;
+        align-items: center;
+    }
+
+    /* ⭐ Smaller filter inputs */
+    .filter-section select,
+    .filter-section input {
+        width: 150px;
+        padding: 8px;
+        font-size: 13px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+    }
+
+    .filter-section button {
+        background: #28a745;
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+
+    .filter-section button:hover {
+        background: #1e7e34;
+    }
+
+    /* Table styling */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+  thead {
+    background: #007bff;
+    color: white;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: table-header-group;   /* ensures full-width strip */
+	border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+	
+}
+
+thead th {
+    background: #007bff;           /* forces blue behind each cell */
+}
+
+    th, td {
+        padding: 10px;
+        text-align: center;
+        font-size: 13px;
+    }
+
+    tbody tr:nth-child(even) {
+        background: #f2f6fc;
+    }
+
+    tbody tr:hover {
+        background: #e9f1ff;
+    }
+
+    .action-btn {
+        padding: 7px 10px;
+        font-size: 12px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        margin-right: 5px;
+    }
+
+    .delete-btn {
+    background: #dc3545;
+    color: white;
+    padding: 8px 18px;   /* increased from 8px 12px */
+    min-width: 90px;     /* ensures longer button */
+    text-align: center;
+}
+
+
+    .delete-btn:hover {
+        background: #b52a37;
+    }
+
+    .edit-btn {
+        background: #ffc107;
+        color: #333;
+    }
+
+    .edit-btn:hover {
+        background: #e0a800;
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 600px) {
+        h2 {
+            font-size: 20px;
+        }
+
+        button {
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+        .filter-section {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .filter-section select,
+        .filter-section input {
+            width: 100%;
+        }
+    }
+</style>
+
+</head>
+
+<body>
+<!-- Navigation -->
+<nav class="top-header">
+    <div class="app-title">Customer Billing</div>
+
+    <div class="menu-options">
+        <button class="menu-btn active" onclick="showPage('calculationsPage', this)">
+            Calculations
+        </button>
+
+        <button class="menu-btn" onclick="showPage('ratesPage', this)">
+            Rates
+        </button>
+    </div>
+</nav>
+
+<!-- Input Fields -->
+<div>
+<div id="calculationsPage" class="page active-page">
+<h2>Customer Selection</h2>
+
+<div class="card">
+    <div class="form-grid">
+
+        <div>
+            <label for="customer">Customer</label>
+            <select id="customer">
+    <option value="">-- Select Customer --</option>
+</select>
+        </div>
+
+        <div>
+            <label for="fuel">Fuel Surcharge</label>
+            <input type="text" id="fuel" placeholder="% Value">
+        </div>
+
+        <div>
+            <label for="containers">No Of Containers</label>
+            <input type="text" id="containers" placeholder="Container Count">
+        </div>
+
+        <div>
+            <label for="weight">Total Weight (M.Ton)</label>
+            <input type="text" id="weight" placeholder="Weight">
+        </div>
+        <div>
+           <label for="storage">Storage</label>
+           <input type="number" id="storage" placeholder="Storage Charge">
+        </div>
+
+        <div>
+            <label for="monthYear">Calendar</label>
+            <input type="month" id="monthYear">
+        </div>
+		
+
+    </div>
+
+    <button id="submitBtn" style="margin-top:20px;">Submit</button>
+</div>
+
+
+<!-- ⭐ Filter Code
+
+<h3>Filter Records</h3>
+
+<div class="card filter-section">
+    <select id="filterCustomer" onchange="applyFilter()">
+        <option value="">-- All Customers --</option>
+        <option value="Meadowlake">Meadowlake</option>
+        <option value="MercerCelar">MercerCelar</option>
+        <option value="MillarWesternWhitecourt">Millar Western Whitecourt</option>
+        <option value="MillarWesternSlavelake">Millar Western Slavelake</option>
+        <option value="MillarWesternQuesnel">Millar Western Quesnel</option>
+        <option value="Skook">Skook/DBA Skook</option>
+        <option value="Kruger">Kruger</option>
+        <option value="WestFraser">West Fraser/Cariboo Mills</option>
+    </select>
+
+    <input type="month" id="filterMonth" onchange="applyFilter()">
+
+    <button onclick="clearFilter()">Clear Filter</button>
+    <button onclick="exportToExcel()">Export to Excel</button>
+</div>
+
+  -->
+
+<!-- ⭐ OUTPUT TABLE -->
+<div class="table-header-strip"></div>
+
+<!-- Add 2 Bar charts -->
+<!-- ⭐ MONTH and YEAR FILTER -->
+<div class="card">
+
+    <!-- ⭐ MONTH-YEAR FILTER -->
+    <div style="margin-bottom: 15px;">
+        <label><strong>Select Month & Year</strong></label>
+        <input type="month" id="monthFilter" onchange="generateCharts(this.value)">
+    </div>
+
+    <!-- ⭐ TWO CHARTS SIDE BY SIDE -->
+    <div class="chart-row">
+
+        <div class="chart-box">
+            <h3>Loading Charges</h3>
+            <canvas id="loadingChart"></canvas>
+        </div>
+
+        <div class="chart-box">
+            <h3>Drayage Charges</h3>
+            <canvas id="drayageChart"></canvas>
+        </div>
+		<div class="chart-box">
+            <h3>Storage Charges</h3>
+            <canvas id="storageChart"></canvas>
+        </div>
+
+    </div>
+</div>
+
+
+<!-- ⭐ YOUR EXISTING TABLE -->
+<!-- ⭐ CUSTOMER RECORDS SECTION -->
+<div class="card">
+    <h2>Customer Records</h2>
+
+    <!-- ⭐ YEAR FILTER -->
+    <div id="yearFilterSection">
+        <label><strong>Select Year</strong></label>
+        <input type="number" id="yearFilter" min="2000" max="2100" value="2026">
+    </div>
+
+    <!-- ⭐ EXPORT BUTTON -->
+    <div id="exportButtonWrapper">
+        <button id="exportExcelBtn">Export Customer Records</button>
+    </div>
+
+    <!-- ⭐ SCROLLABLE CUSTOMER RECORDS -->
+    <div id="customerRecordsScroll">
+        <div id="resultTableContainer"></div>
+    </div>
+</div>
+</div>
+
+<!-- Rates Page -->
+<div id="ratesPage" class="page">
+
+    <h2>Customer Rates</h2>
+
+    <div class="card">
+        <h3>Add or Update Rate</h3>
+
+        <div class="form-grid">
+            <div>
+                <label for="rateCustomer">Customer</label>
+                <select id="rateCustomer">
+    <option value="">-- Select Customer --</option>
+</select>
+            </div>
+
+            <div>
+                <label for="rateLoading">Loading Rate</label>
+                <input type="number" id="rateLoading" step="0.01">
+            </div>
+
+            <div>
+                <label for="rateDrayage">Drayage Rate</label>
+                <input type="number" id="rateDrayage" step="0.01">
+            </div>
+
+            <div>
+                <label for="ratePMR">PMR Rate</label>
+                <input type="number" id="ratePMR" step="0.01">
+            </div>
+        </div>
+
+        <input type="hidden" id="editingRateId">
+
+        <button id="saveRateBtn" style="margin-top:20px;">
+            Save Rate
+        </button>
+
+        <button id="cancelRateEditBtn"
+                type="button"
+                style="margin-top:20px; background:#6c757d; display:none;"
+                onclick="cancelRateEdit()">
+            Cancel
+        </button>
+    </div>
+
+    <div class="card">
+        <h3>Existing Rates</h3>
+        <div id="ratesTableContainer"></div>
+    </div>
+
+</div>
+
+
+<script>
+let currentLoadingPrice = 0;
+let currentDrayage = 0;
+let currentPMR = 0;
+
+<!-- Update the customer rate change event -->
+document.getElementById("customer").addEventListener("change", function () {
+    const selectedOption = this.options[this.selectedIndex];
+
+    currentLoadingPrice =
+        parseFloat(selectedOption.dataset.price || 0);
+
+    currentDrayage =
+        parseFloat(selectedOption.dataset.drayage || 0);
+
+    currentPMR =
+        parseFloat(selectedOption.dataset.pmr || 0);
+});
+
+
+
+
+// ⭐ Clear fields on click of Submit
+// Clear all input fields
+function clearInputs() {
+    document.getElementById("customer").value = "";
+    document.getElementById("weight").value = "";
+    document.getElementById("monthYear").value = "";
+    document.getElementById("containers").value = "";
+    document.getElementById("fuel").value = "";
+    document.getElementById("storage").value = "";
+}
+
+
+// ⭐ Save row to Firebase
+function saveRow(customer, weight, loadingPrice, loadingTotal, drayageTotal, monthYear) {
+    db.ref("rows").push({
+        Customer: customer || 0,
+        Weight: weight || 0,
+        LoadingPrice: loadingPrice || 0,
+        LoadingTotal: loadingTotal || 0,
+        DrayageTotal: drayageTotal || 0,
+        MonthYear: monthYear || 0,
+        timestamp: Date.now()
+    });
+}
+
+<!-- Filter Function -->
+function applyFilter() {
+    const selectedCustomer = document.getElementById("filterCustomer").value;
+    const selectedMonth = document.getElementById("filterMonth").value;
+
+    db.ref("rows").once("value").then(snapshot => {
+        const data = snapshot.val();
+        const tbody = document.querySelector("#resultTable tbody");
+        tbody.innerHTML = "";
+
+        for (let id in data) {
+            const row = data[id];
+
+            const matchCustomer = selectedCustomer === "" || row.Customer === selectedCustomer;
+            const matchMonth = selectedMonth === "" || row.MonthYear === selectedMonth;
+
+            // ⭐ Show row only if BOTH filters match
+            if (matchCustomer && matchMonth) {
+                const tr = document.createElement("tr");
+
+                tr.innerHTML = `
+                    <td>${row.Customer}</td>
+                    <td>${row.Weight}</td>
+                    <td>${row.LoadingPrice}</td>
+                    <td>${row.LoadingTotal}</td>
+                    <td>${row.DrayageTotal}</td>
+                    <td>${row.MonthYear}</td>
+                    <td><button onclick="deleteRow('${id}')">Delete</button></td>
+                    <td><button onclick="editRow('${id}')">Edit</button></td>
+                `;
+
+                tbody.appendChild(tr);
+            }
+        }
+    });
+}
+function clearFilter() {
+    document.getElementById("filterMonth").value = "";
+    loadRows();
+}
+
+function deleteRow(id) {
+    const confirmDelete = confirm("Are you sure you want to delete this record?");
+
+    if (!confirmDelete) return;   // user cancelled
+
+    db.ref("rows/" + id).remove()
+        .then(() => {
+            alert("Record deleted successfully.");
+        })
+        .catch(error => {
+            alert("Error deleting record: " + error);
+        });
+}
+
+function editRow(id) {
+    db.ref("rows/" + id).once("value").then(snapshot => {
+        const row = snapshot.val();
+
+        const newWeight = prompt("Enter new weight:", row.Weight);
+        if (newWeight === null) return;
+
+        const newMonth = prompt("Enter new Month-Year:", row.MonthYear);
+        if (newMonth === null) return;
+
+        const loadingTotal = row.LoadingPrice * parseFloat(newWeight);
+
+        db.ref("rows/" + id).update({
+            Weight: parseFloat(newWeight),
+            LoadingTotal: loadingTotal.toFixed(2),
+            MonthYear: newMonth
+        });
+    });
+}
+
+
+</script>
+</div>
+<!-- ⭐ Firebase Scripts -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+const firebaseConfig = {
+    apiKey: "AIzaSyCdEQrLx6dfgEPU0x1R3L1cDZMRNAMqDe0",
+    authDomain: "pulp-billing.firebaseapp.com",
+    databaseURL: "https://pulp-billing-default-rtdb.firebaseio.com",
+    projectId: "pulp-billing",
+    storageBucket: "pulp-billing.firebasestorage.app",
+    messagingSenderId: "179575494950",
+    appId: "1:179575494950:web:29fe82b22762ad581b49e7",
+    measurementId: "G-Y5WXF52RGB"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+let ratesCache = {};
+const customerNames = [
+    "Meadowlake",
+    "MercerPeace",
+	"MercerCelgar",
+    "MillarWesternWhitecourt",
+    "MillarWesternSlavelake",
+	"MillarWesternQuesnel",
+    "Skook",
+    "Kruger",
+	"Mondi",
+    "WestFraser/Cariboo"
+];
+function populateRateCustomerDropdown() {
+    const customerSelect =
+        document.getElementById("rateCustomer");
+
+    const currentValue = customerSelect.value;
+
+    customerSelect.innerHTML = `
+        <option value="">-- Select Customer --</option>
+    `;
+
+    customerNames
+        .sort((a, b) => a.localeCompare(b))
+        .forEach(customerName => {
+            const option = document.createElement("option");
+
+            option.value = customerName;
+            option.textContent = customerName;
+
+            customerSelect.appendChild(option);
+        });
+
+    // Preserve the selected customer while editing
+    if (
+        customerNames.includes(currentValue)
+    ) {
+        customerSelect.value = currentValue;
+    }
+}
+function loadRates() {
+    db.ref("rates").once("value")
+        .then(snapshot => {
+            ratesCache = snapshot.val() || {};
+            renderRatesTable();
+            populateCustomerDropdown();
+        })
+        .catch(error => {
+            console.error("Error loading rates:", error);
+            document.getElementById("ratesTableContainer").innerHTML =
+                "<p>Unable to load rates.</p>";
+        });
+}
+
+function renderRatesTable() {
+    const container = document.getElementById("ratesTableContainer");
+
+    const rateIds = Object.keys(ratesCache);
+
+    if (rateIds.length === 0) {
+        container.innerHTML = "<p>No rates have been added yet.</p>";
+        return;
+    }
+
+    const table = document.createElement("table");
+
+    table.innerHTML = `
+        <thead>
+            <tr>
+                <th>Customer</th>
+                <th>Loading Rate</th>
+                <th>Drayage Rate</th>
+                <th>PMR Rate</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    `;
+
+    const tbody = table.querySelector("tbody");
+
+    rateIds
+        .sort((a, b) => {
+            return ratesCache[a].customer.localeCompare(
+                ratesCache[b].customer
+            );
+        })
+        .forEach(rateId => {
+            const rate = ratesCache[rateId];
+            const tr = document.createElement("tr");
+
+            tr.innerHTML = `
+                <td>${escapeHtml(rate.customer)}</td>
+                <td>${Number(rate.loading || 0).toFixed(2)}</td>
+                <td>${Number(rate.drayage || 0).toFixed(2)}</td>
+                <td>${Number(rate.pmr || 0).toFixed(2)}</td>
+                <td>
+                    <button
+                        class="rate-action-btn rate-edit-btn"
+                        onclick="editRate('${rateId}')">
+                        Edit
+                    </button>
+
+                    <button
+                        class="rate-action-btn rate-delete-btn"
+                        onclick="deleteRate('${rateId}')">
+                        Delete
+                    </button>
+                </td>
+            `;
+
+            tbody.appendChild(tr);
+        });
+
+    container.innerHTML = "";
+    container.appendChild(table);
+}
+
+function populateCustomerDropdown() {
+    const customerSelect = document.getElementById("customer");
+
+    if (!customerSelect) return;
+
+    const previousValue = customerSelect.value;
+
+    customerSelect.innerHTML = `
+        <option value="">-- Select Customer --</option>
+    `;
+
+    Object.keys(ratesCache)
+        .sort((a, b) => {
+            return ratesCache[a].customer.localeCompare(
+                ratesCache[b].customer
+            );
+        })
+        .forEach(rateId => {
+            const rate = ratesCache[rateId];
+
+            const option = document.createElement("option");
+            option.value = rate.customer;
+            option.textContent = rate.customer;
+
+            option.dataset.price = rate.loading || 0;
+            option.dataset.drayage = rate.drayage || 0;
+            option.dataset.pmr = rate.pmr || 0;
+            option.dataset.rateId = rateId;
+
+            customerSelect.appendChild(option);
+        });
+
+    if (
+        [...customerSelect.options].some(
+            option => option.value === previousValue
+        )
+    ) {
+        customerSelect.value = previousValue;
+    }
+}
+
+document.getElementById("saveRateBtn").addEventListener("click", function () {
+    const customer = document
+        .getElementById("rateCustomer")
+        .value
+        .trim();
+
+    const loading = parseFloat(
+        document.getElementById("rateLoading").value
+    );
+
+    const drayage = parseFloat(
+        document.getElementById("rateDrayage").value
+    );
+
+    const pmr = parseFloat(
+        document.getElementById("ratePMR").value
+    );
+
+    const editingRateId =
+        document.getElementById("editingRateId").value;
+
+    if (!customer) {
+        alert("Customer name is required.");
+        return;
+    }
+
+    if (
+        isNaN(loading) ||
+        isNaN(drayage) ||
+        isNaN(pmr)
+    ) {
+        alert("Please enter valid Loading, Drayage, and PMR rates.");
+        return;
+    }
+
+    const rateData = {
+        customer: customer,
+        loading: loading,
+        drayage: drayage,
+        pmr: pmr,
+        updatedAt: Date.now()
+    };
+
+    let saveRequest;
+
+    if (editingRateId) {
+        saveRequest = db
+            .ref("rates/" + editingRateId)
+            .update(rateData);
+    } else {
+        const existingRate = Object.values(ratesCache).find(rate => {
+            return rate.customer.toLowerCase() === customer.toLowerCase();
+        });
+
+        if (existingRate) {
+            alert("A rate already exists for this customer.");
+            return;
+        }
+
+        saveRequest = db.ref("rates").push({
+            ...rateData,
+            createdAt: Date.now()
+        });
+    }
+
+    saveRequest
+        .then(() => {
+            alert(editingRateId ? "Rate updated." : "Rate added.");
+
+            clearRateForm();
+            loadRates();
+        })
+        .catch(error => {
+            console.error(error);
+            alert("Unable to save rate.");
+        });
+});
+
+function editRate(rateId) {
+    const rate = ratesCache[rateId];
+
+    if (!rate) return;
+
+    document.getElementById("rateCustomer").value = rate.customer;
+    document.getElementById("rateLoading").value = rate.loading;
+    document.getElementById("rateDrayage").value = rate.drayage;
+    document.getElementById("ratePMR").value = rate.pmr;
+    document.getElementById("editingRateId").value = rateId;
+
+    document.getElementById("saveRateBtn").textContent = "Update Rate";
+    document.getElementById("cancelRateEditBtn").style.display =
+        "inline-block";
+}
+
+function cancelRateEdit() {
+    clearRateForm();
+}
+
+function clearRateForm() {
+    document.getElementById("rateCustomer").value = "";
+    document.getElementById("rateLoading").value = "";
+    document.getElementById("rateDrayage").value = "";
+    document.getElementById("ratePMR").value = "";
+    document.getElementById("editingRateId").value = "";
+
+    document.getElementById("saveRateBtn").textContent = "Save Rate";
+    document.getElementById("cancelRateEditBtn").style.display = "none";
+}
+
+function deleteRate(rateId) {
+    const rate = ratesCache[rateId];
+
+    if (!rate) return;
+
+    const confirmed = confirm(
+        `Delete rates for ${rate.customer}?`
+    );
+
+    if (!confirmed) return;
+
+    db.ref("rates/" + rateId)
+        .remove()
+        .then(() => {
+            alert("Rate deleted.");
+            loadRates();
+        })
+        .catch(error => {
+            console.error(error);
+            alert("Unable to delete rate.");
+        });
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function showPage(pageId, clickedButton) {
+    document.querySelectorAll(".page").forEach(page => {
+        page.classList.remove("active-page");
+    });
+
+    document.getElementById(pageId).classList.add("active-page");
+
+    document.querySelectorAll(".menu-btn").forEach(button => {
+        button.classList.remove("active");
+    });
+
+    clickedButton.classList.add("active");
+
+    if (pageId === "ratesPage") {
+        loadRates();
+    }
+}
+
+
+/* ⭐ Load rows into table */
+function loadRows() {
+    db.ref("rows").once("value").then(snapshot => {
+        const data = snapshot.val();
+
+        const selectedYear = document.getElementById("yearFilter").value;
+
+        const container = document.getElementById("resultTableContainer");
+        container.innerHTML = "";   // clear old tables
+
+        const grouped = {};
+
+        // ⭐ GROUP BY CUSTOMER
+        for (let id in data) {
+            const row = data[id];
+            const customer = row.Customer;
+
+            // ⭐ Extract year from MonthYear (e.g., "2026-09")
+            const rowYear = row.MonthYear.split("-")[0];
+
+            // ⭐ Apply year filter
+            if (selectedYear && selectedYear !== "" && rowYear !== selectedYear) {
+                continue;
+            }
+
+            if (!grouped[customer]) {
+                grouped[customer] = [];
+            }
+
+				grouped[customer].push({
+					MonthYear: row.MonthYear,
+					LoadingRate: parseFloat(row.LoadingPrice || 0),
+					Weight: parseFloat(row.Weight || 0),
+					Containers: parseFloat(row.Containers || 0),
+					FuelSurcharge: parseFloat(row.Fuel || 0),
+					TotalLoading: parseFloat(row.LoadingTotal || 0),
+					TotalDrayage: parseFloat(row.DrayageTotal || 0),
+					Storage: parseFloat(row.Storage || 0),
+					TotalCharge: (
+						parseFloat(row.LoadingTotal || 0) +
+						parseFloat(row.DrayageTotal || 0) +
+						parseFloat(row.Storage || 0)
+					)
+				});
+
+
+
+        }
+
+        // ⭐ BUILD SEPARATE TABLES FOR EACH CUSTOMER
+        Object.keys(grouped).forEach(customer => {
+
+            grouped[customer].sort((a, b) => b.MonthYear.localeCompare(a.MonthYear));
+
+            const tableWrapper = document.createElement("div");
+            tableWrapper.style.marginBottom = "25px";
+
+            const title = document.createElement("h3");
+            title.textContent = customer;
+            tableWrapper.appendChild(title);
+
+            const table = document.createElement("table");
+            table.className = "resultTable";
+
+            table.innerHTML = `
+                <thead>
+                    <tr>
+                        <th>Month-Year</th>
+                        <th>Loading Rate</th>
+                        <th>Total Weight</th>
+                        <th>Total Loading</th>
+                        <th>No of Containers</th>
+                        <th>FS (%)</th>
+                        <th>Total Drayage</th>
+						<th>Total Storage</th>
+						<th>Total Charge</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            `;
+
+            const tbody = table.querySelector("tbody");
+
+            grouped[customer].forEach(row => {
+                const tr = document.createElement("tr");
+
+					tr.innerHTML = `
+						<td>${row.MonthYear}</td>
+						<td>${row.LoadingRate.toFixed(2)}</td>
+						<td>${row.Weight.toFixed(2)}</td>
+						<td>${row.TotalLoading.toFixed(2)}</td>
+						<td>${row.Containers}</td>
+						<td>${row.FuelSurcharge}%</td>
+						<td>${row.TotalDrayage.toFixed(2)}</td>
+						<td>${row.Storage.toFixed(2)}</td>
+						<td>${row.TotalCharge.toFixed(2)}</td>
+					`;
+
+                tbody.appendChild(tr);
+            });
+
+            tableWrapper.appendChild(table);
+            container.appendChild(tableWrapper);
+        });
+    });
+}
+/* ⭐ Export Excel */
+document.getElementById("exportExcelBtn").addEventListener("click", function () {
+
+    const tables = document.querySelectorAll(".resultTable");
+
+    if (tables.length === 0) {
+        alert("No customer records available for export.");
+        return;
+    }
+
+    // Combined data array for one sheet
+    const combinedData = [];
+
+    tables.forEach(table => {
+
+        // Get customer name from <h3>
+        const customerName = table.previousElementSibling.textContent.trim();
+
+        // Add customer header
+        combinedData.push([`Customer: ${customerName}`]);
+
+        // Extract table rows
+        const rows = table.querySelectorAll("tr");
+
+        rows.forEach((tr, index) => {
+            const cells = Array.from(tr.querySelectorAll("th, td")).map(cell => cell.textContent.trim());
+            combinedData.push(cells);
+        });
+
+        // Add blank row between customers
+        combinedData.push([]);
+    });
+
+    // Create workbook + worksheet
+    const workbook = XLSX.utils.book_new();
+    const worksheet = XLSX.utils.aoa_to_sheet(combinedData);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Customer Records");
+
+    // Export file
+    XLSX.writeFile(workbook, "Customer_Records.xlsx");
+});
+
+
+
+document.getElementById("yearFilter").addEventListener("input", loadRows);
+
+/* ⭐ Charts */
+function generateCharts(selectedMonthYear) {
+
+    db.ref("rows").once("value").then(snapshot => {
+        const data = snapshot.val();
+
+        const loadingTotals = {};
+        const drayageTotals = {};
+		const storageTotals = {};
+
+        for (let id in data) {
+            const row = data[id];
+
+            if (row.MonthYear !== selectedMonthYear) continue;
+
+            const customer = row.Customer;
+
+            if (!loadingTotals[customer]) loadingTotals[customer] = 0;
+            if (!drayageTotals[customer]) drayageTotals[customer] = 0;
+			if (!storageTotals[customer]) storageTotals[customer] = 0;
+
+
+            loadingTotals[customer] += parseFloat(row.LoadingTotal || 0);
+            drayageTotals[customer] += parseFloat(row.DrayageTotal || 0);
+			storageTotals[customer] += parseFloat(row.Storage || 0);
+        }
+
+        const customers = Object.keys(loadingTotals);
+
+        if (window.loadingChartInstance) window.loadingChartInstance.destroy();
+        if (window.drayageChartInstance) window.drayageChartInstance.destroy();
+		if (window.storageChartInstance) window.storageChartInstance.destroy();
+
+        const ctx1 = document.getElementById("loadingChart").getContext("2d");
+        window.loadingChartInstance = new Chart(ctx1, {
+            type: "bar",
+            data: {
+                labels: customers,
+                datasets: [{
+    label: "Loading Charges",
+    data: customers.map(c => loadingTotals[c]),
+    backgroundColor: "#007bff",
+	barThickness: 25,
+    minBarLength: 10
+}]
+            },
+            options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+        tooltip: { enabled: true }
+    },
+    hover: {
+        mode: 'nearest',
+        intersect: false
+    },
+	interaction: {
+    mode: 'nearest',
+    intersect: false,
+    axis: 'x'
+},
+    scales: {
+        y: { beginAtZero: true }
+    }
+}
+
+        });
+
+        const ctx2 = document.getElementById("drayageChart").getContext("2d");
+        window.drayageChartInstance = new Chart(ctx2, {
+            type: "bar",
+            data: {
+                labels: customers,
+                datasets: [{
+                    label: "Drayage Charges",
+                    data: customers.map(c => drayageTotals[c]),
+                    backgroundColor: "#28a745",
+					barThickness: 25,
+                    minBarLength: 10
+                }]
+            },
+            options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+        tooltip: { enabled: true }
+    },
+    hover: {
+        mode: 'nearest',
+        intersect: false
+    },
+	interaction: {
+    mode: 'nearest',
+    intersect: false,
+    axis: 'x'
+},
+    scales: {
+        y: { beginAtZero: true }
+    }
+}
+
+        });
+		const ctx3 = document.getElementById("storageChart").getContext("2d");
+window.storageChartInstance = new Chart(ctx3, {
+    type: "bar",
+    data: {
+        labels: customers,
+        datasets: [{
+            label: "Storage Charges",
+            data: customers.map(c => storageTotals[c]),
+            backgroundColor: "#ffc107",   // yellow
+            barThickness: 25,
+            minBarLength: 10
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: { display: false },
+            tooltip: { enabled: true }
+        },
+        hover: {
+            mode: 'nearest',
+            intersect: false
+        },
+        interaction: {
+            mode: 'nearest',
+            intersect: false,
+            axis: 'x'
+        },
+        scales: {
+            y: { beginAtZero: true }
+        }
+    }
+});
+    });
+}
+
+/* ⭐ Delete */
+function deleteRow(id) {
+    const confirmDelete = confirm("Are you sure you want to delete this record?");
+    if (!confirmDelete) return;
+
+    db.ref("rows/" + id).remove()
+        .then(() => {
+            alert("Record deleted successfully.");
+            loadRows();
+
+            const selectedMonthYear = document.getElementById("monthFilter").value;
+            generateCharts(selectedMonthYear);
+        })
+        .catch(error => alert("Error deleting record: " + error));
+}
+
+/* ⭐ Submit */
+document.getElementById("submitBtn").addEventListener("click", function () {
+
+    const customerSelect = document.getElementById("customer");
+    const customer = customerSelect.value;
+    const weight = parseFloat(document.getElementById("weight").value) || 0;
+    const monthYear = document.getElementById("monthYear").value;
+    const containers = parseFloat(document.getElementById("containers").value) || 0;
+    const fuel = parseFloat(document.getElementById("fuel").value) || 0;
+
+    const currentLoadingPrice = parseFloat(customerSelect.options[customerSelect.selectedIndex].dataset.price);
+    const currentDrayage = parseFloat(customerSelect.options[customerSelect.selectedIndex].dataset.drayage);
+    const currentPMR = parseFloat(customerSelect.options[customerSelect.selectedIndex].dataset.pmr) || 0;
+    const storage = parseFloat(document.getElementById("storage").value) || 0;
+
+    if (!customer || !monthYear) {
+        alert("Customer and Calendar are required.");
+        return;
+    }
+
+    if (isNaN(storage)) {
+        alert("Enter Storage value.");
+        return;
+    }
+
+    // ✔ Only input validation here
+    const wantsLoadingInput = weight > 0;
+    const wantsDrayageInput = containers > 0 || fuel > 0;
+    const wantsStorageInput = storage > 0;
+
+    if (!wantsLoadingInput && !wantsDrayageInput && !wantsStorageInput) {
+        alert("Enter Weight OR Fuel + Containers OR Storage to update.");
+        return;
+    }
+
+    // ⭐ FIRST: Find duplicate record
+    db.ref("rows").once("value").then(snapshot => {
+        const data = snapshot.val() || {};
+        let duplicateId = null;
+
+        for (let id in data) {
+            const row = data[id];
+            if (row.Customer === customer && row.MonthYear === monthYear) {
+                duplicateId = id;
+                break;
+            }
+        }
+
+        // ⭐ If duplicate exists → UPDATE existing record
+        if (duplicateId) {
+
+            const confirmUpdate = confirm(
+                `A record already exists for ${customer} (${monthYear}).\nDo you want to update it?`
+            );
+
+            if (!confirmUpdate) return;
+
+            db.ref("rows/" + duplicateId).once("value").then(snapshot => {
+                const oldRow = snapshot.val();
+
+                const updatePayload = {
+                    Customer: customer,
+                    MonthYear: monthYear,
+                    timestamp: Date.now()
+                };
+
+                // ⭐ Detect actual drayage change
+                const wantsLoadingUpdate = weight > 0;
+                const wantsDrayageUpdate =
+                    (containers > 0 && containers !== (oldRow.Containers || 0)) ||
+                    (fuel > 0 && fuel !== (oldRow.Fuel || 0));
+                const wantsStorageUpdate = storage > 0;
+
+                // ⭐ Loading update
+                if (wantsLoadingUpdate) {
+                    updatePayload.Weight = weight;
+                    updatePayload.LoadingPrice = currentLoadingPrice;
+                    updatePayload.LoadingTotal = currentLoadingPrice * weight;
+                }
+
+                // ⭐ Drayage update
+                if (wantsDrayageUpdate) {
+                    const effectiveContainers = containers > 0 ? containers : (oldRow.Containers || 0);
+                    const effectiveFuel = fuel > 0 ? fuel : (oldRow.Fuel || 0);
+
+                    updatePayload.Fuel = effectiveFuel;
+                    updatePayload.Containers = effectiveContainers;
+
+                    updatePayload.DrayageTotal =
+                        (currentDrayage * effectiveContainers) +
+                        (currentPMR * effectiveContainers) +
+                        ((effectiveFuel / 100 * currentDrayage) * effectiveContainers);
+                }
+
+                // ⭐ Storage update
+                if (wantsStorageUpdate) {
+                    updatePayload.Storage = storage;
+                }
+
+                // ⭐ Preserve old values if not updated
+                if (!wantsLoadingUpdate) {
+                    updatePayload.Weight = oldRow.Weight || 0;
+                    updatePayload.LoadingPrice = oldRow.LoadingPrice || 0;
+                    updatePayload.LoadingTotal = oldRow.LoadingTotal || 0;
+                }
+
+                if (!wantsDrayageUpdate) {
+                    updatePayload.Fuel = oldRow.Fuel || 0;
+                    updatePayload.Containers = oldRow.Containers || 0;
+                    updatePayload.DrayageTotal = oldRow.DrayageTotal || 0;
+                }
+
+                if (!wantsStorageUpdate) {
+                    updatePayload.Storage = oldRow.Storage || 0;
+                }
+
+                db.ref("rows/" + duplicateId).update(updatePayload);
+
+                alert("Existing record updated.");
+                clearInputs();
+                loadRows();
+                const selectedMonthYear = document.getElementById("monthFilter").value;
+                generateCharts(selectedMonthYear);
+            });
+
+            return;
+        }
+
+        // ⭐ If NO duplicate → CREATE NEW RECORD
+        const loadingTotal = wantsLoadingInput ? currentLoadingPrice * weight : 0;
+
+        const drayageTotal = wantsDrayageInput
+            ? (currentDrayage * containers) +
+              (currentPMR * containers) +
+              ((fuel / 100 * currentDrayage) * containers)
+            : 0;
+
+        db.ref("rows").push({
+            Customer: customer,
+            Weight: weight,
+            LoadingPrice: currentLoadingPrice,
+            LoadingTotal: loadingTotal,
+            Fuel: fuel,
+            Containers: containers,
+            DrayageTotal: drayageTotal,
+            Storage: storage,
+            MonthYear: monthYear,
+            timestamp: Date.now()
+        });
+
+        alert("New record added.");
+        clearInputs();
+        loadRows();
+        const selectedMonthYear = document.getElementById("monthFilter").value;
+        generateCharts(selectedMonthYear);
+    });
+});
+
+
+
+/* ⭐ Initialize */
+populateRateCustomerDropdown();
+loadRates();
+loadRows();
+
+const currentMonthYear = new Date().toISOString().slice(0, 7);
+document.getElementById("monthFilter").value = currentMonthYear;
+generateCharts(currentMonthYear);
+
+
+</script>
+
+</body>
+</html>
