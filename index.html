@@ -1389,9 +1389,9 @@ document.getElementById("submitBtn").addEventListener("click", function () {
     }
 
     // ✔ Only input validation here
-    const wantsLoadingInput = weight > 0;
-    const wantsDrayageInput = containers > 0 || fuel > 0;
-    const wantsStorageInput = storage > 0;
+    const wantsLoadingInput = weight >= 0;
+    const wantsDrayageInput = containers >= 0 || fuel >= 0;
+    const wantsStorageInput = storage >= 0;
 
     if (!wantsLoadingInput && !wantsDrayageInput && !wantsStorageInput) {
         alert("Enter Weight OR Fuel + Containers OR Storage to update.");
