@@ -7,6 +7,41 @@
 <title>Customer Billing</title>
 
 <style>
+.company-logo {
+    height: 42px;
+    width: auto;
+    object-fit: contain;
+    display: block;
+}
+
+.brand-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Pushes Calculations and Rates to the far right */
+.menu-options {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.company-name {
+    font-size: 21px;
+    font-weight: bold;
+}
+
+@media (max-width: 600px) {
+    .company-logo {
+        height: 36px;
+    }
+
+    .company-name {
+        font-size: 18px;
+    }
+}
+
 .top-header {
     display: flex;
     justify-content: space-between;
@@ -349,14 +384,24 @@ thead th {
 <body>
 <!-- Navigation -->
 <nav class="top-header">
-    <div class="app-title">Customer Billing</div>
+    <div class="brand-section">
+        <img
+            src="company-logo.png"
+            alt="Company Logo"
+            class="company-logo"
+        >
+
+        <div class="company-name">Customer Billing</div>
+    </div>
 
     <div class="menu-options">
-        <button class="menu-btn active" onclick="showPage('calculationsPage', this)">
+        <button class="menu-btn active"
+                onclick="showPage('calculationsPage', this)">
             Calculations
         </button>
 
-        <button class="menu-btn" onclick="showPage('ratesPage', this)">
+        <button class="menu-btn"
+                onclick="showPage('ratesPage', this)">
             Rates
         </button>
     </div>
