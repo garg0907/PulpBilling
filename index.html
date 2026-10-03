@@ -572,6 +572,36 @@ thead th {
         -webkit-appearance: none;
         appearance: none;
     }
+}
+/* Keep form controls, including the iPhone month picker, inside their grid cells */
+.form-grid > div {
+    min-width: 0;
+}
+
+.form-grid input,
+.form-grid select {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+.form-grid input[type="month"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 48px;
+}
+
+@media (max-width: 600px) {
+    .card {
+        min-width: 0;
+    }
+
+    .form-grid input[type="month"] {
+        font-size: 16px;
+        padding: 8px 10px;
+    }
 }	
 </style>
 
