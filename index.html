@@ -4,6 +4,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Customer Billing</title>
 
 <style>
@@ -377,6 +378,184 @@ thead th {
             width: 100%;
         }
     }
+	/* Keep padding and borders inside declared widths */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* Prevent grid/flex children from forcing the page wider */
+.form-grid > *,
+.chart-box,
+.card,
+#ratesTableContainer,
+#resultTableContainer {
+    min-width: 0;
+}
+
+/* Inputs should fit their grid column, not exceed it */
+.form-grid select,
+.form-grid input {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Let chart columns share available space */
+.chart-box {
+    flex: 1 1 0;
+    width: auto;
+    position: relative;
+    min-height: 350px;
+}
+
+.chart-box canvas {
+    display: block;
+    width: 100% !important;
+}
+
+/* Use horizontal scrolling for wide tables rather than clipping columns */
+#customerRecordsScroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+#resultTableContainer,
+#ratesTableContainer {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.resultTable,
+#ratesTableContainer table {
+    min-width: 720px;
+}
+
+/* Tighter layout on tablets */
+@media (max-width: 800px) {
+    body {
+        padding: 16px;
+    }
+
+    .top-header {
+        margin: -16px -16px 20px;
+    }
+
+    .chart-row {
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .chart-box {
+        flex: 1 1 calc(50% - 16px);
+        min-width: 250px;
+    }
+}
+
+/* Phone layout */
+@media (max-width: 600px) {
+    body {
+        padding: 12px;
+    }
+
+    .top-header {
+        margin: -12px -12px 18px;
+        padding: 12px;
+        gap: 12px;
+    }
+
+    .brand-section {
+        min-width: 0;
+        gap: 8px;
+    }
+
+    .company-name {
+        font-size: 17px;
+    }
+
+    .company-logo {
+        max-width: 48px;
+        height: 34px;
+    }
+
+    .menu-options {
+        display: flex;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .menu-btn {
+        flex: 1;
+        min-width: 0;
+        padding: 9px 8px;
+    }
+
+    .card {
+        padding: 14px;
+        border-radius: 10px;
+    }
+
+    .form-grid {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+
+    .form-grid input,
+    .form-grid select,
+    .filter-section input,
+    .filter-section select {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .chart-row {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .chart-box {
+        flex: none;
+        width: 100%;
+        min-width: 0;
+        min-height: 300px;
+    }
+
+    .chart-box canvas {
+        height: 250px !important;
+    }
+
+    #monthFilter,
+    #yearFilter {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #exportButtonWrapper {
+        justify-content: stretch;
+    }
+
+    #exportExcelBtn {
+        width: 100%;
+    }
+
+    #customerRecordsScroll {
+        max-height: 60vh;
+        padding: 8px;
+    }
+
+    th,
+    td {
+        padding: 8px;
+        white-space: nowrap;
+    }
+
+    .delete-btn {
+        min-width: 0;
+        padding: 8px 12px;
+    }
+}
+
 </style>
 
 </head>
@@ -386,7 +565,7 @@ thead th {
 <nav class="top-header">
     <div class="brand-section">
         <img
-            src="./company-logo.png"
+            src="company-logo.png"
             alt="Company Logo"
             class="company-logo"
         >
@@ -1367,38 +1546,46 @@ function deleteRow(id) {
 document.getElementById("submitBtn").addEventListener("click", function () {
 
     const customerSelect = document.getElementById("customer");
-    const customer = customerSelect.value;
-    const weight = parseFloat(document.getElementById("weight").value) || 0;
-    const monthYear = document.getElementById("monthYear").value;
-    const containers = parseFloat(document.getElementById("containers").value) || 0;
-    const fuel = parseFloat(document.getElementById("fuel").value) || 0;
+    const customer = customerSelect.value.trim();
+    const monthYear = document.getElementById("monthYear").value.trim();
+
+    // Numeric fields (null if empty)
+    const weight = document.getElementById("weight").value === "" ? null : parseFloat(document.getElementById("weight").value);
+    const containers = document.getElementById("containers").value === "" ? null : parseFloat(document.getElementById("containers").value);
+    const fuel = document.getElementById("fuel").value === "" ? null : parseFloat(document.getElementById("fuel").value);
+    const storage = document.getElementById("storage").value === "" ? null : parseFloat(document.getElementById("storage").value);
 
     const currentLoadingPrice = parseFloat(customerSelect.options[customerSelect.selectedIndex].dataset.price);
     const currentDrayage = parseFloat(customerSelect.options[customerSelect.selectedIndex].dataset.drayage);
     const currentPMR = parseFloat(customerSelect.options[customerSelect.selectedIndex].dataset.pmr) || 0;
-    const storage = parseFloat(document.getElementById("storage").value) || 0;
 
+    // Mandatory fields
     if (!customer || !monthYear) {
         alert("Customer and Calendar are required.");
         return;
     }
 
-    if (isNaN(storage)) {
-        alert("Enter Storage value.");
+    // Validate numeric fields (must be >= 0 if provided)
+    const invalidNumeric =
+        (weight !== null && weight < 0) ||
+        (containers !== null && containers < 0) ||
+        (fuel !== null && fuel < 0) ||
+        (storage !== null && storage < 0);
+
+    if (invalidNumeric) {
+        alert("Numeric fields must be greater than or equal to 0.");
         return;
     }
 
-    // ✔ Only input validation here
-    const wantsLoadingInput = weight >= 0;
-    const wantsDrayageInput = containers >= 0 || fuel >= 0;
-    const wantsStorageInput = storage >= 0;
+    // At least one numeric field must be provided
+    const wantsAnyUpdate = weight !== null || containers !== null || fuel !== null || storage !== null;
 
-    if (!wantsLoadingInput && !wantsDrayageInput && !wantsStorageInput) {
-        alert("Enter Weight OR Fuel + Containers OR Storage to update.");
+    if (!wantsAnyUpdate) {
+        alert("Enter Weight OR Fuel OR Containers OR Storage to update.");
         return;
     }
 
-    // ⭐ FIRST: Find duplicate record
+    // Check for duplicate record
     db.ref("rows").once("value").then(snapshot => {
         const data = snapshot.val() || {};
         let duplicateId = null;
@@ -1411,7 +1598,7 @@ document.getElementById("submitBtn").addEventListener("click", function () {
             }
         }
 
-        // ⭐ If duplicate exists → UPDATE existing record
+        // ⭐ UPDATE EXISTING RECORD
         if (duplicateId) {
 
             const confirmUpdate = confirm(
@@ -1429,55 +1616,45 @@ document.getElementById("submitBtn").addEventListener("click", function () {
                     timestamp: Date.now()
                 };
 
-                // ⭐ Detect actual drayage change
-                const wantsLoadingUpdate = weight > 0;
-                const wantsDrayageUpdate =
-                    (containers > 0 && containers !== (oldRow.Containers || 0)) ||
-                    (fuel > 0 && fuel !== (oldRow.Fuel || 0) || oldRow.DrayageTotal != currentDrayage);
-                const wantsStorageUpdate = storage > 0;
-				//const oldDrayage = oldRow.DrayageTotal;
+                // Detect which fields user updated
+                const wantsLoadingUpdate = weight !== null;
+                const wantsDrayageUpdate = containers !== null || fuel !== null;
+                const wantsStorageUpdate = storage !== null;
 
                 // ⭐ Loading update
                 if (wantsLoadingUpdate) {
                     updatePayload.Weight = weight;
                     updatePayload.LoadingPrice = currentLoadingPrice;
                     updatePayload.LoadingTotal = currentLoadingPrice * weight;
+                } else {
+                    updatePayload.Weight = oldRow.Weight;
+                    updatePayload.LoadingPrice = oldRow.LoadingPrice;
+                    updatePayload.LoadingTotal = oldRow.LoadingTotal;
                 }
 
                 // ⭐ Drayage update
                 if (wantsDrayageUpdate) {
-                    const effectiveContainers = containers > 0 ? containers : (oldRow.Containers || 0);
-                    const effectiveFuel = fuel > 0 ? fuel : (oldRow.Fuel || 0);
+                    const effectiveContainers = containers !== null ? containers : oldRow.Containers;
+                    const effectiveFuel = fuel !== null ? fuel : oldRow.Fuel;
 
-                    updatePayload.Fuel = effectiveFuel;
                     updatePayload.Containers = effectiveContainers;
+                    updatePayload.Fuel = effectiveFuel;
 
                     updatePayload.DrayageTotal =
                         (currentDrayage * effectiveContainers) +
                         (currentPMR * effectiveContainers) +
                         ((effectiveFuel / 100 * currentDrayage) * effectiveContainers);
+                } else {
+                    updatePayload.Containers = oldRow.Containers;
+                    updatePayload.Fuel = oldRow.Fuel;
+                    updatePayload.DrayageTotal = oldRow.DrayageTotal;
                 }
 
                 // ⭐ Storage update
                 if (wantsStorageUpdate) {
                     updatePayload.Storage = storage;
-                }
-
-                // ⭐ Preserve old values if not updated
-                if (!wantsLoadingUpdate) {
-                    updatePayload.Weight = oldRow.Weight || 0;
-                    updatePayload.LoadingPrice = oldRow.LoadingPrice || 0;
-                    updatePayload.LoadingTotal = oldRow.LoadingTotal || 0;
-                }
-
-                if (!wantsDrayageUpdate) {
-                    updatePayload.Fuel = oldRow.Fuel || 0;
-                    updatePayload.Containers = oldRow.Containers || 0;
-                    updatePayload.DrayageTotal = oldRow.DrayageTotal || 0;
-                }
-
-                if (!wantsStorageUpdate) {
-                    updatePayload.Storage = oldRow.Storage || 0;
+                } else {
+                    updatePayload.Storage = oldRow.Storage;
                 }
 
                 db.ref("rows/" + duplicateId).update(updatePayload);
@@ -1492,24 +1669,24 @@ document.getElementById("submitBtn").addEventListener("click", function () {
             return;
         }
 
-        // ⭐ If NO duplicate → CREATE NEW RECORD
-        const loadingTotal = wantsLoadingInput ? currentLoadingPrice * weight : 0;
+        // ⭐ CREATE NEW RECORD
+        const loadingTotal = weight !== null ? currentLoadingPrice * weight : 0;
 
-        const drayageTotal = wantsDrayageInput
-            ? (currentDrayage * containers) +
-              (currentPMR * containers) +
-              ((fuel / 100 * currentDrayage) * containers)
+        const drayageTotal = (containers !== null || fuel !== null)
+            ? (currentDrayage * (containers || 0)) +
+              (currentPMR * (containers || 0)) +
+              (((fuel || 0) / 100 * currentDrayage) * (containers || 0))
             : 0;
 
         db.ref("rows").push({
             Customer: customer,
-            Weight: weight,
+            Weight: weight || 0,
             LoadingPrice: currentLoadingPrice,
             LoadingTotal: loadingTotal,
-            Fuel: fuel,
-            Containers: containers,
+            Fuel: fuel || 0,
+            Containers: containers || 0,
             DrayageTotal: drayageTotal,
-            Storage: storage,
+            Storage: storage || 0,
             MonthYear: monthYear,
             timestamp: Date.now()
         });
