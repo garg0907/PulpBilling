@@ -555,7 +555,24 @@ thead th {
         padding: 8px 12px;
     }
 }
+/* Keep the chart month picker inside its card on iPhone */
+#monthFilter {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    font-size: 16px; /* avoids iOS Safari zooming on focus */
+}
 
+@media (max-width: 600px) {
+    #monthFilter {
+        height: 54px;
+        padding: 8px 12px;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+}	
 </style>
 
 </head>
